@@ -1,0 +1,24 @@
+# templates/dotnet-app.service.j2
+[Unit]
+Description={{ app_name | title }} .NET Application
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory={{ app_directory }}/current
+ExecStart=/usr/bin/dotnet {{ app_directory }}/current/{{ app_executable | default(app_name) }}.dll
+Restart=always
+RestartSec=10
+User={{ app_user }}
+Group={{ app_group }}
+Environment=ASPNETCORE_ENVIRONMENT={{ aspnet_environment | default('Production') }}
+Environment=ASPNETCORE_URLS=http://0.0.0.0:{{ app_port | default('5000') }}
+EnvironmentFile={{ app_directory }}/app.env
+TimeoutStartSec=300
+KillSignal=SIGINT
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier={{ app_name }}
+
+[Install]
+WantedBy=multi-user.target

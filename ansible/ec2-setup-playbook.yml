@@ -1,0 +1,125 @@
+---
+- name: Configure EC2 instance for .NET application deployment
+  hosts: ec2_servers
+  become: yes
+  vars:
+    app_name: "PropertyService"
+    app_user: "www-data"
+    app_group: "www-data"
+    app_directory: "/var/www/your-app"
+    dotnet_version: "8.0"
+    
+  tasks:
+    - name: Update package cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+
+    - name: Install required packages
+      apt:
+        name:
+          - curl
+          - wget
+          - apt-transport-https
+          - software-properties-common
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Add Microsoft package repository
+      shell: |
+        wget https://packages.microsoft.com/config/ubuntu/{{ ansible_distribution_version }}/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+        dpkg -i packages-microsoft-prod.deb
+        rm packages-microsoft-prod.deb
+      args:
+        creates: /etc/apt/sources.list.d/microsoft-prod.list
+      when: ansible_os_family == "Debian"
+
+    - name: Update package cache after adding Microsoft repo
+      apt:
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Install .NET runtime
+      apt:
+        name: "aspnetcore-runtime-{{ dotnet_version }}"
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Create application user if it doesn't exist
+      user:
+        name: "{{ app_user }}"
+        system: yes
+        shell: /bin/false
+        home: "{{ app_directory }}"
+        create_home: no
+      when: app_user != "www-data"
+
+    - name: Create application directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0755'
+      loop:
+        - "{{ app_directory }}"
+        - "{{ app_directory }}/current"
+        - "{{ app_directory }}/backup"
+        - "{{ app_directory }}/logs"
+
+    - name: Create systemd service file
+      template:
+        src: dotnet-app.service.j2
+        dest: "/etc/systemd/system/{{ app_name }}.service"
+        mode: '0644'
+      notify:
+        - reload systemd
+        - restart app service
+
+    - name: Configure logrotate for application logs
+      template:
+        src: app-logrotate.j2
+        dest: "/etc/logrotate.d/{{ app_name }}"
+        mode: '0644'
+
+    - name: Configure firewall for application port
+      ufw:
+        rule: allow
+        port: "{{ app_port | default('5000') }}"
+        proto: tcp
+      when: configure_firewall | default(false)
+
+    - name: Set up log directory permissions
+      file:
+        path: "{{ app_directory }}/logs"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0755'
+        state: directory
+
+    - name: Create environment file for application
+      template:
+        src: app.env.j2
+        dest: "{{ app_directory }}/app.env"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0600'
+
+    - name: Enable and start application service (will fail initially, but that's OK)
+      systemd:
+        name: "{{ app_name }}"
+        enabled: yes
+        daemon_reload: yes
+      ignore_errors: yes
+
+  handlers:
+    - name: reload systemd
+      systemd:
+        daemon_reload: yes
+
+    - name: restart app service
+      systemd:
+        name: "{{ app_name }}"
+        state: restarted
+      ignore_errors: yes

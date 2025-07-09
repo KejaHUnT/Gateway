@@ -1,0 +1,13 @@
+# templates/app-logrotate.j2
+{{ app_directory }}/logs/*.log {
+    daily
+    missingok
+    rotate 30
+    compress
+    delaycompress
+    notifempty
+    create 644 {{ app_user }} {{ app_group }}
+    postrotate
+        systemctl reload {{ app_name }} > /dev/null 2>&1 || true
+    endscript
+}

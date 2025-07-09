@@ -1,0 +1,15 @@
+# group_vars/ec2_servers.yml
+app_name: "PropertyService"
+app_user: "www-data"
+app_group: "www-data"
+app_directory: "/var/www/your-app"
+app_executable: "KejaHUnt_PropertiesAPI"  # Your .NET executable name
+app_port: "5000"
+dotnet_version: "8.0"
+aspnet_environment: "Production"
+
+# Environment variables for your app
+app_env_vars:
+ ReverseProxy__Clusters__fileHandlerService__Destinations__files__Address: "https://localhost:7115/"
+ ReverseProxy__Clusters__propertyService__Destinations__properties__Address: "https://localhost:7209/"
+ ReverseProxy__Clusters__accessService__Destinations__access__Address: "https://localhost:7159/"
