@@ -1,9 +1,9 @@
 # group_vars/ec2_servers.yml
-app_name: "PropertyService"
+app_name: "Gateway"
 app_user: "www-data"
 app_group: "www-data"
 app_directory: "/var/www/your-app"
-app_executable: "KejaHUnt_PropertiesAPI"  # Your .NET executable name
+app_executable: "KejaHunT_Gateway"  # Your .NET executable name
 app_port: "5000"
 dotnet_version: "8.0"
 aspnet_environment: "Production"
