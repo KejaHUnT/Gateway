@@ -53,7 +53,7 @@ jobs:
       
       - name: Build application
         run: |
-          dotnet publish -c Release -o publish
+          dotnet publish KejaHunT_Gateway.csproj -c Release -o publish
           tar -czf app-deployment.tar.gz -C publish .
       
       - name: Copy files to EC2
