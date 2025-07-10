@@ -3,7 +3,6 @@
   hosts: ec2_servers
   become: yes
   vars:
-    app_name: "PropertyService"
     app_user: "www-data"
     app_group: "www-data"
     app_directory: "/var/www/your-app"
