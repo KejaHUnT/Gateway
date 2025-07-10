@@ -16,6 +16,7 @@ Environment=ASPNETCORE_URLS=http://0.0.0.0:{{ app_port | default('5000') }}
 EnvironmentFile={{ app_directory }}/app.env
 TimeoutStartSec=300
 KillSignal=SIGINT
+KillMode=control-group
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier={{ app_name }}
