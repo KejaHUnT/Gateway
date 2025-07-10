@@ -11,5 +11,5 @@ aspnet_environment: "Production"
 # Environment variables for your app
 app_env_vars:
  ReverseProxy__Clusters__fileHandlerService__Destinations__files__Address: "https://localhost:7115/"
- ReverseProxy__Clusters__propertyService__Destinations__properties__Address: "https://localhost:7209/"
+ ReverseProxy__Clusters__propertyService__Destinations__properties__Address: "http://3.87.211.55:5000/"
  ReverseProxy__Clusters__accessService__Destinations__access__Address: "https://localhost:7159/"
