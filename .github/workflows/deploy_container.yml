@@ -37,16 +37,16 @@ jobs:
           push: true
           tags: kalukwo/kejahunt-gateway:latest
 
-#   trigger-remote:
-#     name: Trigger Remote Deployment
-#     needs: build
-#     runs-on: ubuntu-latest
+  trigger-remote:
+    name: Trigger Remote Deployment
+    needs: build
+    runs-on: ubuntu-latest
 
-#     steps:
-#       - name: Trigger remote workflow
-#         run: |
-#           curl -X POST \
-#             -H "Authorization: Bearer ${{ secrets.GCP_TRIGGER_TOKEN }}" \
-#             -H "Accept: application/vnd.github.v3+json" \
-#             https://api.github.com/repos/Kalukwo/KejaHUnTinfrastructure/actions/workflows/deploy.yml/dispatches \
-#             -d '{"ref":"main"}'
+    steps:
+      - name: Trigger remote workflow
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.GCP_TRIGGER_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/Kalukwo/KejaHUnTinfrastructure/actions/workflows/deploy.yml/dispatches \
+            -d '{"ref":"main"}'
