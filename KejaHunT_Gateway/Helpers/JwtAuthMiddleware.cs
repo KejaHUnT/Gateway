@@ -9,7 +9,7 @@ namespace KejaHunT_Gateway.Helpers
         private readonly RequestDelegate _next;
         private readonly IConfiguration _config;
         private readonly HashSet<string> _publicPrefixes;
-        private readonly HashSet<(string Method, string Path)> _securedRoutes;
+        private readonly List<(string Method, string PathPrefix)> _securedRoutes;
 
         public JwtAuthMiddleware(RequestDelegate next, IConfiguration config)
         {
@@ -18,24 +18,32 @@ namespace KejaHunT_Gateway.Helpers
 
             _publicPrefixes = _config.GetSection("Jwt:PublicPrefixes")
                                      .Get<List<string>>()?
-                                     .Select(p => p.Trim().ToLowerInvariant())
+                                     .Select(p => NormalizePath(p))
                                      .ToHashSet() ?? new HashSet<string>();
 
             var securedList = _config.GetSection("Jwt:SecuredRoutes").Get<List<RouteRule>>() ?? new List<RouteRule>();
             _securedRoutes = securedList
-                .Select(r => (r.Method.ToUpperInvariant(), r.Path.ToLowerInvariant()))
-                .ToHashSet();
+                .Select(r => (r.Method.ToUpperInvariant(), NormalizePath(r.Path)))
+                .ToList();
         }
 
         public async Task Invoke(HttpContext context)
         {
-            var path = context.Request.Path.Value?.ToLowerInvariant() ?? "";
+            var path = NormalizePath(context.Request.Path.Value ?? "");
             var method = context.Request.Method.ToUpperInvariant();
 
-            // Step 1: Require auth for secured routes
-            if (_securedRoutes.Contains((method, path)))
+            if (_publicPrefixes.Any(prefix => path.StartsWith(prefix)))
             {
-                var token = context.Request.Headers["Authorization"].FirstOrDefault()?.Split(" ").Last();
+                await _next(context);
+                return;
+            }
+
+            var isSecured = _securedRoutes.Any(r =>
+                r.Method == method && path.StartsWith(r.PathPrefix));
+
+            if (isSecured)
+            {
+                var token = GetTokenFromHeaderOrCookie(context);
 
                 if (string.IsNullOrWhiteSpace(token))
                 {
@@ -59,26 +67,40 @@ namespace KejaHunT_Gateway.Helpers
                     }, out _);
 
                     await _next(context);
-                    return;
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Console.WriteLine($"JWT validation failed: {ex.Message}");
                     context.Response.StatusCode = 401;
                     await context.Response.WriteAsync("Invalid or expired token.");
-                    return;
                 }
-            }
-
-            // Step 2: Allow access to public prefixes
-            if (_publicPrefixes.Any(prefix => path.StartsWith(prefix)))
-            {
-                await _next(context);
                 return;
             }
 
-            // Step 3: Default to token required
-            context.Response.StatusCode = 401;
-            await context.Response.WriteAsync("Authorization required.");
+            // If route is not public or secured — allow (default fallback)
+            await _next(context);
+        }
+
+        private string? GetTokenFromHeaderOrCookie(HttpContext context)
+        {
+            var headerToken = context.Request.Headers["Authorization"].FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(headerToken))
+            {
+                return headerToken.StartsWith("Bearer ") ? headerToken.Substring(7) : headerToken;
+            }
+
+            var cookieToken = context.Request.Cookies["Authorization"];
+            if (!string.IsNullOrWhiteSpace(cookieToken))
+            {
+                return cookieToken; // Stored without Bearer prefix on client
+            }
+
+            return null;
+        }
+
+        private static string NormalizePath(string path)
+        {
+            return path.TrimEnd('/').ToLowerInvariant();
         }
 
         private class RouteRule
