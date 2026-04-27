@@ -28,6 +28,22 @@ app.UseCors(options =>
     options.AllowAnyHeader();
 });
 
+app.Use(async (context, next) =>
+{
+    var config = context.RequestServices.GetRequiredService<IConfiguration>();
+
+    var apiKey = config["ApiKeys:Payment:XApiKey"];
+    var clientId = config["ApiKeys:Payment:XClientId"];
+
+    // Only for payment routes
+    if (context.Request.Path.StartsWithSegments("/payment"))
+    {
+        context.Request.Headers["X-Api-Key"] = apiKey;
+        context.Request.Headers["X-Client-Id"] = clientId;
+    }
+
+    await next();
+});
 
 // Status check
 app.MapGet("/status", () => Results.Ok("API Gateway is running."));
